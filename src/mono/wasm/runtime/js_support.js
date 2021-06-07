@@ -1,6 +1,37 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+function configLoaded(config) {
+    // In some cases there may be no DotNet object (such as in tests) so we no-op during the callback
+    // Note that DotNet is the new 'Module' object
+    const onConfigLoadedCallback = typeof DotNet !== "undefined" ? DotNet['onConfigLoaded'] : (_) => {};
+    const onMonoRuntimeInitializedCallback = typeof DotNet !== "undefined" ? DotNet['onMonoRuntimeInitialized'] : (_) => {};
+    // Note: onRuntimeInitialized is called by emsdk in another location
+
+    config.loaded_cb = function () {
+        // sends callback so that user knows that mono is loaded
+        onMonoRuntimeInitializedCallback(null);
+    };
+    config.fetch_file_cb = function (asset) {
+        return fetch (asset, { credentials: 'same-origin' });
+    }
+    
+    // sends callback so that user can modify the config as needed before sending it to mono but this is optional
+    // for user to handle
+    config = onConfigLoadedCallback(config) ?? config;
+
+    try
+    {
+        MONO.mono_load_runtime_and_bcl_args (config);
+    } catch (error) {
+        onMonoRuntimeInitializedCallback(error);
+    }
+}
+
+
+
+// MOSTLY COPIED FROM PR#53606 WHICH HAS NOT BEEN MERGED YET /////////////////////////////////////////////////////////
+
 // Loads the config file located in the root of the project
 // Not meant to be used outside of this class (TODO make private to this file when project converted to TS)
 function load_config() {
@@ -8,16 +39,12 @@ function load_config() {
     const ENVIRONMENT_IS_NODE = typeof process === "object";
     const ENVIRONMENT_IS_WEB = typeof window === "object";
 
-    // In some cases there may be no Module object (such as in tests)
-    // so we no-op during the callback
-    const callback = typeof Module !== "undefined" ? Module['onConfigLoaded'] : (_) => {};
-
     if (ENVIRONMENT_IS_NODE){
         try {
             const config = JSON.parse(require("./mono-config.json"));
-            callback(config);
+            configLoaded(config);
         } catch(e) {
-            callback({error: "Error loading mono-config.json file from current directory"});
+            configLoaded({error: "Error loading mono-config.json file from current directory"});
         }
     } else if (ENVIRONMENT_IS_WEB){
         const xobj = new XMLHttpRequest();
@@ -27,30 +54,30 @@ function load_config() {
             if (xobj.readyState == XMLHttpRequest.DONE) {
                 if (xobj.status === 0 || (xobj.status >= 200 && xobj.status < 400)) {
                     const config = JSON.parse(xobj.responseText);
-                    callback(config);
+                    configLoaded(config);
                 } else {
                     // error if the request to load the file was successful but loading failed
-                    callback({error: "Error loading mono-config.json file from current directory"});
+                    configLoaded({error: "Error loading mono-config.json file from current directory"});
                 }
             }
         };
         xobj.onerror = function() {
             // error if the request failed
-            callback({error: "Error loading mono-config.json file from current directory"});
+            configLoaded({error: "Error loading mono-config.json file from current directory"});
         }
 
         try {
             xobj.send();
         } catch(e) {
             // other kinds of errors
-            callback({error: "Error loading mono-config.json file from current directory"});
+            configLoaded({error: "Error loading mono-config.json file from current directory"});
         }
     } else { // shell or worker
         try {
             const config = JSON.parse(read("./mono-config.json")); // read is a v8 debugger command
-            callback(config);
+            configLoaded(config);
         } catch(e) {
-            callback({error: "Error loading mono-config.json file from current directory"});
+            configLoaded({error: "Error loading mono-config.json file from current directory"});
         }
     }
 }
