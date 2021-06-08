@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+import DotNet from "./dotnet.js"; // User can import DotNet so that there can even potentially be multiple instances in 1 app
+
 // Called when the mono-config.js (soon to be mono-config.json via PR#53606) is loaded
 function onConfigLoaded (config) {
     // we can do some modification to config at runtime here
@@ -35,22 +37,24 @@ DotNet.onMonoRuntimeInitialized = onMonoRuntimeInitialized; // required as it ac
 
 
 // FROM HTML SCRIPT TAG (all js code should be in js files) ////////////////////////////////////////////////////////////////////////////
-var is_testing = false;
-var onLoad = function() {
-    var url = new URL(decodeURI(window.location));
+// Only modification was to use newer syntax.
+
+let is_testing = false;
+function onLoad () {
+    const url = new URL(decodeURI(window.location));
     let args = url.searchParams.getAll('arg');
     is_testing = args !== undefined && (args.find(arg => arg == '--testing') !== undefined);
 };
 onLoad();
 
-var test_exit = function(exit_code) {
+function test_exit (exit_code) {
     if (!is_testing) {
         console.log(`test_exit: ${exit_code}`);
         return;
     }
 
     /* Set result in a tests_done element, to be read by xharness */
-    var tests_done_elem = document.createElement("label");
+    let tests_done_elem = document.createElement("label");
     tests_done_elem.id = "tests_done";
     tests_done_elem.innerHTML = exit_code.toString();
     document.body.appendChild(tests_done_elem);
@@ -58,9 +62,9 @@ var test_exit = function(exit_code) {
     console.log(`WASM EXIT ${exit_code}`);
 };
 
-var App = {
+const App = {
     init: function () {
-        var ret = BINDING.call_static_method("[Wasm.Browser.Sample] Sample.Test:TestMeaning", []);
+        const ret = BINDING.call_static_method("[Wasm.Browser.Sample] Sample.Test:TestMeaning", []);
         document.getElementById("out").innerHTML = ret;
 
         if (is_testing)

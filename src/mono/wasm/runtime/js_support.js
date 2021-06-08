@@ -1,11 +1,11 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+let DotNet = {}; // DotNet can be thought of as the exported API
+
 function configLoaded(config) {
-    // In some cases there may be no DotNet object (such as in tests) so we no-op during the callback
-    // Note that DotNet is the new 'Module' object
-    const onConfigLoadedCallback = typeof DotNet !== "undefined" ? DotNet['onConfigLoaded'] : (_) => {};
-    const onMonoRuntimeInitializedCallback = typeof DotNet !== "undefined" ? DotNet['onMonoRuntimeInitialized'] : (_) => {};
+    const onConfigLoadedCallback = DotNet['onConfigLoaded'];
+    const onMonoRuntimeInitializedCallback = DotNet['onMonoRuntimeInitialized'];
     // Note: onRuntimeInitialized is called by emsdk in another location
 
     config.loaded_cb = function () {
