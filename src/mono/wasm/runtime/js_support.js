@@ -1,7 +1,7 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-let DotNet = {}; // DotNet can be thought of as the exported API
+export let DotNet = {}; // DotNet can be thought of as the exported API
 
 function configLoaded(config) {
     const onConfigLoadedCallback = DotNet['onConfigLoaded'];
