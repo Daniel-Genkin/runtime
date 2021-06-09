@@ -3,7 +3,7 @@
 
 // This file defines various types related with the WASM API
 
-declare namespace DotNet {
+declare namespace DotNet { // TODO due to dotnet.js making everything public ther eis a `DOTNET` object as well as this one
     type onConfigLoaded = (config: MonoConfig) => MonoConfig;
     type onRuntimeInitialized = () => void;
     type onMonoRuntimeInitialized = (error: Error) => void;
