@@ -1,6 +1,8 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
+"use strict"; // I am working on this in a separate PR but am including it here as well
+
 import DotNet from "./dotnet.js"; // User can import DotNet so that there can even potentially be multiple instances in 1 app
 
 // Called when the mono-config.js (soon to be mono-config.json via PR#53606) is loaded
@@ -16,21 +18,21 @@ function onConfigLoaded (config) {
 function onRuntimeInitialized () {
 }
 
-// Called when MONO runtime is loaded and ready or if it errors
-function onMonoRuntimeInitialized (error) {
-    if (error) {
-        // mono didn't load correctly
-        test_exit(1); // test runner related
-        throw(error);
-    } else {
-        // mono loaded and we can start doing stuff with it
-        App.init()
-    }
+// Called when MONO runtime is loaded and ready successfully
+function onMonoRuntimeInitialized () {
+    SampleApp.init()
+}
+
+// Called when MONO runtime or the config file didn't load correctly
+function onInitError(error) {
+   test_exit(1); // test runner related
+   throw(error);
 }
 
 DotNet.onConfigLoaded = onConfigLoaded; // optional
 DotNet.onRuntimeInitialized = onRuntimeInitialized; // optional
 DotNet.onMonoRuntimeInitialized = onMonoRuntimeInitialized; // required as it acts like the entry point into the program
+DotNet.onInitError = onInitError; // required as it acts like the entry point into the program if loading the runtime fails
 // They are called in the following order: onConfigLoaded, onRuntimeInitialized, onMonoRuntimeInitialized
 
 
@@ -62,7 +64,7 @@ function test_exit (exit_code) {
     console.log(`WASM EXIT ${exit_code}`);
 };
 
-const App = {
+const SampleApp = {
     init: function () {
         const ret = BINDING.call_static_method("[Wasm.Browser.Sample] Sample.Test:TestMeaning", []);
         document.getElementById("out").innerHTML = ret;

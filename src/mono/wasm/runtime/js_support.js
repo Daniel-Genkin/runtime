@@ -6,11 +6,12 @@ export let DotNet = {}; // DotNet can be thought of as the exported API
 function configLoaded(config) {
     const onConfigLoadedCallback = DotNet['onConfigLoaded'];
     const onMonoRuntimeInitializedCallback = DotNet['onMonoRuntimeInitialized'];
+    const onInitError = DotNet['onInitError'];
     // Note: onRuntimeInitialized is called by emsdk in another location
 
     config.loaded_cb = function () {
         // sends callback so that user knows that mono is loaded
-        onMonoRuntimeInitializedCallback(null);
+        onMonoRuntimeInitializedCallback();
     };
     config.fetch_file_cb = function (asset) {
         return fetch (asset, { credentials: 'same-origin' });
@@ -18,13 +19,19 @@ function configLoaded(config) {
     
     // sends callback so that user can modify the config as needed before sending it to mono but this is optional
     // for user to handle
-    config = onConfigLoadedCallback(config) ?? config;
+    if (!config.error) {
+        config = onConfigLoadedCallback(config) ?? config;
+    } else {
+        // send error callback with the error message
+        onInitError(config.error);
+        return; // no point in continuing loading mono as config is incorrect
+    }
 
     try
     {
         MONO.mono_load_runtime_and_bcl_args (config);
     } catch (error) {
-        onMonoRuntimeInitializedCallback(error);
+        onInitError(error);
     }
 }
 
