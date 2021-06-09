@@ -41,13 +41,18 @@ DotNet.onInitError = onInitError; // required as it acts like the entry point in
 // FROM HTML SCRIPT TAG (all js code should be in js files) ////////////////////////////////////////////////////////////////////////////
 // Only modification was to use newer syntax.
 
+document.onreadystatechange = () => {
+    if (document.readyState === 'complete') {
+        onLoad();
+    }
+};
+
 let is_testing = false;
 function onLoad () {
-    const url = new URL(decodeURI(window.location));
+    const url = new URL(decodeURI(window.location.href));
     let args = url.searchParams.getAll('arg');
     is_testing = args !== undefined && (args.find(arg => arg == '--testing') !== undefined);
 };
-onLoad();
 
 function test_exit (exit_code) {
     if (!is_testing) {
@@ -67,7 +72,10 @@ function test_exit (exit_code) {
 const SampleApp = {
     init: function () {
         const ret = BINDING.call_static_method("[Wasm.Browser.Sample] Sample.Test:TestMeaning", []);
-        document.getElementById("out").innerHTML = ret;
+        const out = document.getElementById("out");
+        if (out) {
+            out.innerHTML = ret;
+        }
 
         if (is_testing)
         {

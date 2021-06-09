@@ -1,0 +1,21 @@
+{ // copied from Blazor (https://github.com/dotnet/aspnetcore/blob/main/src/Components/Web.JS/tsconfig.json)
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "noImplicitAny": false,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "sourceMap": true,
+    "target": "es2019",
+    "lib": ["es2019", "dom"],
+    "strict": true,
+    
+    // TODO I added but we should remove when the transition to TS is done
+    "allowJs": true,
+    "checkJs": false, // this prevents TS from currently throwing errors in the files (set to true if you like the color red :))
+    "typeRoots": [ 
+      "./declarations" 
+    ],
+    "outDir": "./build/"
+  },
+  "exclude": [ "build" ]
+}

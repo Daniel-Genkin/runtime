@@ -4,8 +4,9 @@
 // This file defines various types related with the interaction with Dotnet interop
 
 // TODO find better types than the anys, however it will do for now
+// TODO move to DotNet namespace
 
-export interface BINDING { // Should BINDING be renamed?
+declare interface BINDING { // Should BINDING be renamed?
     call_static_method: (method: string, params: any[]) => void,
     mono_bindings_init: (binding: string) => void,
 	mono_bind_method: (method: string, this_arg: number, args_marshal: string?, friendly_name: string) => any,
@@ -19,7 +20,7 @@ export interface BINDING { // Should BINDING be renamed?
 	mono_intern_string: (string: string) => any,
 }
 
-export interface MONO { //should MONO be renamed?
+declare interface MONO { //should MONO be renamed?
 	pump_message: () => void,
 	mono_load_runtime_and_bcl: (unused_vfs_prefix /* unused - can it be removed? */ : any, deploy_prefix: String, debug_level: number, file_list, loaded_cb: () => void, fetch_file_cb: (asset: string) => void) => any,
 	mono_load_runtime_and_bcl_args: (args: MonoRuntimeArgs) => any,
@@ -46,7 +47,7 @@ type MonoRuntimeArgs = {
 	}[]
 }
 
-type LoadedFiles = { 
+export type LoadedFiles = { 
 	url: string,
 	file: string
 }[]

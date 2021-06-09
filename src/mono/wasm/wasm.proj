@@ -10,7 +10,7 @@
     <MicrosoftNetCoreAppRuntimePackDir>$([MSBuild]::NormalizeDirectory('$(ArtifactsBinDir)', 'microsoft.netcore.app.runtime.$(PackageRID)', '$(Configuration)'))</MicrosoftNetCoreAppRuntimePackDir>
     <MicrosoftNetCoreAppRuntimePackRidDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRuntimePackDir)', 'runtimes', '$(PackageRID)'))</MicrosoftNetCoreAppRuntimePackRidDir>
     <MicrosoftNetCoreAppRuntimePackNativeDir>$([MSBuild]::NormalizeDirectory('$(MicrosoftNetCoreAppRuntimePackRidDir)', 'native'))</MicrosoftNetCoreAppRuntimePackNativeDir>
-    <WasmEnableES6 Condition="'$(WasmEnableES6)' == ''">false</WasmEnableES6>
+    <WasmEnableES6 Condition="'$(WasmEnableES6)' == ''">true</WasmEnableES6>
     <FilterSystemTimeZones Condition="'$(FilterSystemTimeZones)' == ''">false</FilterSystemTimeZones>
     <WasmEnableMetadataUpdate Condition="'$(MonoMetadataUpdate)' == 'true'">true</WasmEnableMetadataUpdate>
     <EmccCmd>emcc</EmccCmd>

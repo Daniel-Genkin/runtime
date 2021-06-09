@@ -2,6 +2,7 @@
   <PropertyGroup>
     <WasmCopyAppZipToHelixTestDir Condition="'$(ArchiveTests)' == 'true'">true</WasmCopyAppZipToHelixTestDir>
     <WasmMainJSPath>main.js</WasmMainJSPath>
+    <!-- <WasmEnableES6>true</WasmEnableES6> -->
   </PropertyGroup>
 
   <ItemGroup>
