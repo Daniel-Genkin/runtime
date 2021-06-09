@@ -72,6 +72,6 @@ type WasmRoot = {
 	clear: () => void,
 	toString: () => string,
 	release: any,
-	__buffer: any;
-	__index: number;
+	__buffer: any,
+	__index: number,
 }
