@@ -1,9 +1,9 @@
 // Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 
-"use strict"; // I am working on this in a separate PR but am including it here as well
+"use strict"; // I am working on this in a separate PR (#54011) but am including it here as well
 
-import DotNet from "./dotnet.js"; // User can import DotNet so that there can even potentially be multiple instances in 1 app
+import DotNet from "./dotnet.js"; // User can import DotNet so that there can even potentially be multiple instances in 1 app and we don't pollute global namespace
 
 // Called when the mono-config.js (soon to be mono-config.json via PR#53606) is loaded
 function onConfigLoaded (config) {
@@ -14,12 +14,12 @@ function onConfigLoaded (config) {
     return config;
 }
 
-// Called when Emscripten runtime is loaded
+// Called when mono runtime is ready but before being started
 function onRuntimeInitialized () {
 }
 
-// Called when MONO runtime is loaded and ready successfully
-function onMonoRuntimeInitialized () {
+// Called when MONO runtime started
+function onRuntimeStarted () {
     SampleApp.init()
 }
 
@@ -31,7 +31,7 @@ function onInitError(error) {
 
 DotNet.onConfigLoaded = onConfigLoaded; // optional
 DotNet.onRuntimeInitialized = onRuntimeInitialized; // optional
-DotNet.onMonoRuntimeInitialized = onMonoRuntimeInitialized; // required as it acts like the entry point into the program
+DotNet.onRuntimeStarted = onRuntimeStarted; // required as it acts like the entry point into the program
 DotNet.onInitError = onInitError; // required as it acts like the entry point into the program if loading the runtime fails
 // They are called in the following order: onConfigLoaded, onRuntimeInitialized, onMonoRuntimeInitialized
 
