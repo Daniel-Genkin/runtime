@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <WasmCopyAppZipToHelixTestDir Condition="'$(ArchiveTests)' == 'true'">true</WasmCopyAppZipToHelixTestDir>
+    <WasmMainJSPath>runtime.js</WasmMainJSPath>
+    <WasmGenerateRunV8Script>true</WasmGenerateRunV8Script>
+    <WasmGenerateRunNodeScript>true</WasmGenerateRunNodeScript>
+    <PublishTrimmed>false</PublishTrimmed>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NodaTime" Version="3.0.5"/>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <_SampleProject>Wasm.Console.NodeSample.csproj</_SampleProject>
+  </PropertyGroup>
+
+  <Target Name="RunSample" DependsOnTargets="RunSampleWithV8" />
+  <Target Name="RunSampleNode" DependsOnTargets="RunSampleWithNode" />
+</Project>
