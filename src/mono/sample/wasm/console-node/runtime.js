@@ -360,7 +360,7 @@ const App = {
 
 		console.log(`Node sanity check - is 'process' defined: ${process !== undefined ? "Yep" : "Nope"}`)
 
-		// since it is node we use requrie to load dependencies
+		// since it is node we use require to load dependencies
 		const lodash = require('lodash');
 
         const arr1 = ["R", "T", "U", "N", " ", "P", "I", "N", " ", "Q", "1", "N", "O", "F", "D", "E", "2", "!"];
