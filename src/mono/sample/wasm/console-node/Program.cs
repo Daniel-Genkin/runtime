@@ -29,7 +29,7 @@ namespace Sample
 
             var date = future.Date + " " + future.Hour + ":" + future.Minute;
 
-            Console.WriteLine("C# NodaTime (from NuGet) test \t- Time in " + extraMins + "mins is " + date);
+            Console.WriteLine("C# NodaTime (from NuGet) test \t- Time in " + extraMins + " minutes is " + date);
 
             return date;
         }

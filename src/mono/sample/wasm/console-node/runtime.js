@@ -360,19 +360,21 @@ const App = {
 
 		console.log(`Node sanity check - is 'process' defined: ${process !== undefined ? "Yep" : "Nope"}`)
 
+		// since it is node we use requrie to load dependencies
 		const lodash = require('lodash');
 
         const arr1 = ["R", "T", "U", "N", " ", "P", "I", "N", " ", "Q", "1", "N", "O", "F", "D", "E", "2", "!"];
         const arr2 = ["T", "P", "Q", "1", "F", "2"];
 
+		// use lodash to extract out the RUN IN NODE! string from arr1 and the print
         console.log(`JS loadash (from NPM) test \t- ${lodash.difference(arr1, arr2).join("")}`);
 
+        // get the date extraMins minutes from now as ISO string
 		const extraMins = 45;
+		const date = Module.BINDING.call_static_method("[Wasm.Console.NodeSample] Sample.Test:GetDate", [extraMins]);
 
-        // get the date 5 mins from now as ISO string
-        var date = Module.BINDING.call_static_method("[Wasm.Console.Sample] Sample.Test:GetDate", [extraMins]);
-
-        console.log(`JS result from C# \t\t- Time in ${extraMins} is ${date}`);
+		// print to console
+        console.log(`JS result from C# \t\t- Time in ${extraMins} minutes is ${date}`);
 
 		test_exit (0);
 	}

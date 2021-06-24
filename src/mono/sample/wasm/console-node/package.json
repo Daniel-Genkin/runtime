@@ -4,7 +4,7 @@
     "description": "Runs the MONO WASM Console sample in the NodeJS environment",
     "main": "runtime.js",
     "scripts": {
-      "test": "node --trace-warnings runtime.js --run Wasm.Console.Sample.dll"
+      "test": "node --trace-warnings runtime.js --run Wasm.Console.NodeSample.dll"
     },
     "author": "Microsoft",
     "license": "MIT",
