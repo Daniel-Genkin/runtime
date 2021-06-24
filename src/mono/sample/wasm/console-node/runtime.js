@@ -299,7 +299,7 @@ var Module = {
 	 * @type {() => Promise<void>}
 	 */
 	preInit: async function() {
-		Module.config = await Module.MONO.mono_wasm_load_config("./mono-config.json");
+		await Module.MONO.mono_wasm_load_config("./mono-config.json");
 	},
 
 	/** Called after an exception occurs during execution
