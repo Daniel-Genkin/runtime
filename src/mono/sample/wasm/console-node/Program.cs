@@ -27,9 +27,9 @@ namespace Sample
             // Add some extra time
             ZonedDateTime future = utc.PlusMinutes(extraMins);
 
-            var date = future.Date + " " + future.Hour + ":" + future.Minute;
+            var date = $"{future.Date} {future.Hour}:{future.Minute}";
 
-            Console.WriteLine("C# NodaTime (from NuGet) test \t- Time in " + extraMins + " minutes is " + date);
+            Console.WriteLine($"C# NodaTime (from NuGet) test \t- Time in {extraMins} minutes is {date}");
 
             return date;
         }
