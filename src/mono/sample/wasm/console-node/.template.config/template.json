@@ -1,0 +1,8 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Microsoft",
+    "classifications": [ "NodeJS", "Console", "Sample", "WASM", "WebAssembly" ],
+    "identity": "Microsoft.Mono.Wasm.NodeTemplate",
+    "name": "NodeJS on MONO WASM template",
+    "shortName": "wasm-node"
+  }

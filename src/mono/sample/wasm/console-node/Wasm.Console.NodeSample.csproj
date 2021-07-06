@@ -1,6 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <WasmCopyAppZipToHelixTestDir Condition="'$(ArchiveTests)' == 'true'">true</WasmCopyAppZipToHelixTestDir>
     <WasmMainJSPath>runtime.js</WasmMainJSPath>
     <WasmGenerateRunV8Script>true</WasmGenerateRunV8Script>
     <WasmGenerateRunNodeScript>true</WasmGenerateRunNodeScript>
@@ -17,4 +16,33 @@
 
   <Target Name="RunSample" DependsOnTargets="RunSampleWithV8" />
   <Target Name="RunSampleNode" DependsOnTargets="RunSampleWithNode" />
+
+  <PropertyGroup>
+    <PackageType>Template</PackageType>
+    <PackageVersion>1.0</PackageVersion>
+    <PackageId>Microsoft.Mono.Wasm.NodeTemplate</PackageId>
+    <Title>NodeJS on MONO WASM template</Title>
+    <Authors>Microsoft</Authors>
+    <Description>Sample NodeJS on MONO WASM project template</Description>
+    <PackageTags>NodeJS;Console;Sample;WASM;WebAssembly</PackageTags>
+    <TargetFramework>net6.0</TargetFramework>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <UseMonoRuntime>true</UseMonoRuntime>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <WasmGenerateAppBundle>true</WasmGenerateAppBundle>
+  </PropertyGroup>
+
+  <Target Name="PrepareForWasmBuild" BeforeTargets="WasmBuildApp">
+    <ItemGroup>
+      <WasmAssembliesToBundle Include="$(TargetDir)publish\*.dll" />
+    </ItemGroup>
+  </Target>
 </Project>
