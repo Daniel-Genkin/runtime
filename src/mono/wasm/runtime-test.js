@@ -54,13 +54,11 @@ if (is_browser) {
 	};
 }
 
-if (is_node) {
-	var crypto = require('crypto');
-} else if (typeof crypto === 'undefined') {
+if (typeof crypto === 'undefined') {
 	// **NOTE** this is a simple insecure polyfill for testing purposes only
 	// /dev/random doesn't work on js shells, so define our own
 	// See library_fs.js:createDefaultDevices ()
-	var crypto = {
+	crypto = {
 		getRandomValues: function (buffer) {
 			for (var i = 0; i < buffer.length; i++)
 				buffer [i] = (Math.random () * 256) | 0;
@@ -200,8 +198,7 @@ const IOHandler = {
 				try {
 					if (is_node) {
 						const fs = require ('fs');
-						const buffer = fs.readFileSync(path);
-						bytes = buffer.buffer;
+						bytes = fs.readFileSync(path);
 					} else {
 						bytes = read (path, 'binary');
 					}
@@ -353,13 +350,12 @@ var Module = {
 	},
 };
 
-globalThis.Module = Module; // needed so that dotnet.js can access the module
-
-const App = {
+var App = {
 	/** Runs the tests (runtime is now loaded and running)
 	 * @type {() => void}
 	 */
 	init: function () {
+
 		const wasm_set_main_args = Module.cwrap ('mono_wasm_set_main_args', 'void', ['number', 'number']);
 		const wasm_strdup = Module.cwrap ('mono_wasm_strdup', 'number', ['string']);
 
@@ -458,6 +454,7 @@ const App = {
 		}
 	}
 };
+globalThis.App = App; // Necessary as System.Runtime.InteropServices.JavaScript.Tests.MarshalTests (among others) call the App.call_test_method directly
 
 // load the config and runtime files which will start the runtime init and subsiquently the tests
 // uses promise chain as loading is async but we can't use await here
@@ -465,5 +462,5 @@ IOHandler
 	.load ("./dotnet.js")
 	.catch(function(err) {
 		console.error(err);
-		fail_exec("failed to load the mono-config.js or dotnet.js files");
+		fail_exec("failed to load the dotnet.js file");
 	});
