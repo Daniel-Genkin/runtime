@@ -32,3 +32,16 @@ Then they are imported via `require(PACKAGE NAME);`.
 4. Run via `npm test`, `./run-node.sh` (or `run-node.cmd` if on windows) or `node runtime.js --run Wasm.Console.NodeSample.dll`
 
 *Note:* The `/p:ForNode=true` is what enables the NodeJS support. Omitting it (or setting to any value other than `true`) will build as normal for v8 and this sample will not work as v8 does not support NPM packages. This was done for simplicity as this is only a quick demo.
+
+
+## Using as a .NET Workload Template
+
+**Create a new instance of the template:**
+
+1. `dotnet new -i .\src\mono\sample\wasm\console-node\.template.config`
+2. `cd <directory in which you want to create the new template>`
+3. `dotnet new wasm-node`
+
+**Run the template:**
+
+`dotnet publish /p:TargetArchitecture=wasm /p:TargetOS=Browser .\Wasm.Console.NodeSample.csproj -c Debug /p:ForNode=true /p:RuntimeSrcDir=<Path to runtime directory> /p:RuntimeConfig=Debug /p:PublishTrimmed=false`

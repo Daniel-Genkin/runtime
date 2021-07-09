@@ -4,6 +4,11 @@
     <WasmGenerateRunV8Script>true</WasmGenerateRunV8Script>
     <WasmGenerateRunNodeScript>true</WasmGenerateRunNodeScript>
     <PublishTrimmed>false</PublishTrimmed>
+
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
+    <UseMonoRuntime>true</UseMonoRuntime>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,20 +34,23 @@
     <IncludeContentInPack>true</IncludeContentInPack>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <ContentTargetFolders>content</ContentTargetFolders>
-
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
-    <RuntimeIdentifier>browser-wasm</RuntimeIdentifier>
-    <UseMonoRuntime>true</UseMonoRuntime>
   </PropertyGroup>
 
+  <PropertyGroup >
+    <_WasmTargetsDir Condition="'$(_WasmTargetsDir)' == '' and '$(RuntimeSrcDir)' != ''">$(RuntimeSrcDir)\src\mono\wasm\build\</_WasmTargetsDir>
+    <_WasmTargetsDir Condition="'$(_WasmTargetsDir)' != ''">$([MSBuild]::EnsureTrailingSlash($(_WasmTargetsDir)))</_WasmTargetsDir>
+  </PropertyGroup>
+
+  <Import Project="$(_WasmTargetsDir)WasmApp.LocalBuild.props" Condition="Exists('$(_WasmTargetsDir)WasmApp.LocalBuild.props')" />
   <PropertyGroup>
-    <WasmGenerateAppBundle>true</WasmGenerateAppBundle>
+    <WasmBuildAppDependsOn>PrepareForWasmBuild;$(WasmBuildAppDependsOn)</WasmBuildAppDependsOn>
   </PropertyGroup>
 
-  <Target Name="PrepareForWasmBuild" BeforeTargets="WasmBuildApp">
+  <Target Name="PrepareForWasmBuild">
     <ItemGroup>
       <WasmAssembliesToBundle Include="$(TargetDir)publish\*.dll" />
     </ItemGroup>
   </Target>
+  <Import Project="$(_WasmTargetsDir)WasmApp.LocalBuild.targets" Condition="Exists('$(_WasmTargetsDir)WasmApp.LocalBuild.targets')" />
+  <!-- Run template via: ./dotnet.cmd publish /p:TargetArchitecture=wasm /p:TargetOS=Browser .\Wasm.Console.NodeSample.csproj -c Debug /p:ForNode=true /p:RuntimeSrcDir=C:\DEV\runtime /p:RuntimeConfig=Debug /p:PublishTrimmed=false -->
 </Project>
