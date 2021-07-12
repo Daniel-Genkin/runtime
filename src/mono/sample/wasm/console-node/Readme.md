@@ -44,4 +44,4 @@ Then they are imported via `require(PACKAGE NAME);`.
 
 **Run the template:**
 
-`dotnet publish /p:TargetArchitecture=wasm /p:TargetOS=Browser .\Wasm.Console.NodeSample.csproj -c Debug /p:ForNode=true /p:RuntimeSrcDir=<Path to runtime directory> /p:RuntimeConfig=Debug /p:PublishTrimmed=false`
+`dotnet publish /p:TargetArchitecture=wasm /p:TargetOS=Browser .\Wasm.Console.NodeSample.csproj -c Debug /p:PublishTrimmed=false`
