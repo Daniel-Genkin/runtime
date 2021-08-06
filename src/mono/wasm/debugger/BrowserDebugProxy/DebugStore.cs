@@ -453,14 +453,16 @@ namespace Microsoft.WebAssembly.Diagnostics
 
     internal class TypeInfo
     {
-        private AssemblyInfo assembly;
+        internal AssemblyInfo assembly;
         private TypeDefinition type;
         private List<MethodInfo> methods;
+        public int Token { get; }
 
-        public TypeInfo(AssemblyInfo assembly, TypeDefinition type)
+        public TypeInfo(AssemblyInfo assembly, TypeDefinitionHandle typeHandle, TypeDefinition type)
         {
             this.assembly = assembly;
             var metadataReader = assembly.asmMetadataReader;
+            Token = MetadataTokens.GetToken(metadataReader, typeHandle);
             this.type = type;
             methods = new List<MethodInfo>();
             Name = metadataReader.GetString(type.Name);
@@ -594,7 +596,7 @@ namespace Microsoft.WebAssembly.Diagnostics
             {
                 var typeDefinition = asmMetadataReader.GetTypeDefinition(type);
 
-                var typeInfo = new TypeInfo(this, typeDefinition);
+                var typeInfo = new TypeInfo(this, type, typeDefinition);
                 typesByName[typeInfo.FullName] = typeInfo;
                 if (pdbMetadataReader != null)
                 {
@@ -876,7 +878,7 @@ namespace Microsoft.WebAssembly.Diagnostics
 
     internal class DebugStore
     {
-        private List<AssemblyInfo> assemblies = new List<AssemblyInfo>();
+        internal List<AssemblyInfo> assemblies = new List<AssemblyInfo>();
         private readonly HttpClient client;
         private readonly ILogger logger;
 
@@ -934,7 +936,7 @@ namespace Microsoft.WebAssembly.Diagnostics
             }
         }
 
-        public async IAsyncEnumerable<SourceFile> Load(SessionId sessionId, string[] loaded_files, [EnumeratorCancellation] CancellationToken token)
+        public async IAsyncEnumerable<SourceFile> Load(SessionId sessionId, MonoSDBHelper SdbHelper, string[] loaded_files, [EnumeratorCancellation] CancellationToken token)
         {
             var asm_files = new List<string>();
             var pdb_files = new List<string>();
@@ -949,21 +951,40 @@ namespace Microsoft.WebAssembly.Diagnostics
             List<DebugItem> steps = new List<DebugItem>();
             foreach (string url in asm_files)
             {
-                try
+                if (url.StartsWith("http")) // if url is a url to remote resource
                 {
-                    string candidate_pdb = Path.ChangeExtension(url, "pdb");
-                    string pdb = pdb_files.FirstOrDefault(n => n == candidate_pdb);
+                    try
+                    {
+                        string candidate_pdb = Path.ChangeExtension(url, "pdb");
+                        string pdb = pdb_files.FirstOrDefault(n => n == candidate_pdb);
 
-                    steps.Add(
-                        new DebugItem
-                        {
-                            Url = url,
-                            Data = Task.WhenAll(client.GetByteArrayAsync(url, token), pdb != null ? client.GetByteArrayAsync(pdb, token) : Task.FromResult<byte[]>(null))
-                        });
+                        steps.Add(
+                            new DebugItem
+                            {
+                                Url = url,
+                                Data = Task.WhenAll(client.GetByteArrayAsync(url, token), pdb != null ? client.GetByteArrayAsync(pdb, token) : Task.FromResult<byte[]>(null))
+                            });
+
+                    }
+                    catch (Exception e)
+                    {
+                        logger.LogDebug($"Failed to read {url} ({e.Message})");
+                    }
+
                 }
-                catch (Exception e)
+                else // otherwise just load it directly -> running on node
                 {
-                    logger.LogDebug($"Failed to read {url} ({e.Message})");
+                    byte[] fileByte = File.ReadAllBytes(url);
+                    string candidate_pdb = Path.ChangeExtension(url, "pdb");
+                    byte[] pdbByte = null;
+                    if (File.Exists(candidate_pdb))
+                        pdbByte = File.ReadAllBytes(candidate_pdb);
+                    var assembly = new AssemblyInfo(url, fileByte, pdbByte);
+                    assemblies.Add(assembly);
+                    foreach (SourceFile source in assembly.Sources)
+                    {
+                        yield return source;
+                    }
                 }
             }
 

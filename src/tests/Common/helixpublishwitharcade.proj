@@ -45,7 +45,8 @@
         IncludeDotNetCli=$(IncludeDotNetCli);
         DotNetCliRuntime=$(DotNetCliRuntime);
         DotNetCliPackageType=$(DotNetCliPackageType);
-        DotNetCliVersion=$(DotNetCliVersion)
+        DotNetCliVersion=$(DotNetCliVersion);
+        ForNode=$(ForNode)
       </_PropertiesToPass>
     </PropertyGroup>
     <Message Text="DotNetCliVersion: $(DotNetCliVersion)" Importance="High" />
@@ -54,7 +55,7 @@
     <Error Condition="'$(_Scenarios)' == ''" Text="_Scenarios not set" />
 
     <MSBuild Projects="$(MSBuildProjectFile)" Targets="PrepareCorrelationPayloadDirectory" />
-    <MSBuild Projects="$(MSBuildProjectFile)" Targets="PreparePayloadsDirectories" Properties="Scenarios=$(_Scenarios)" StopOnFirstFailure="true" />
+    <MSBuild Projects="$(MSBuildProjectFile)" Targets="PreparePayloadsDirectories" Properties="Scenarios=$(_Scenarios);ForNode=$(ForNode)" StopOnFirstFailure="true" />
     <MSBuild Projects="$(MSBuildProjectFile)" Targets="PreparePALTestArchive" Properties="$(_PropertiesToPass)" StopOnFirstFailure="true" />
 
     <ItemGroup>
@@ -83,6 +84,7 @@
     <HelixRuntimeRid Condition="'$(TargetOSSpec)' == 'Linux_musl'">linux-musl-$(TargetArchitecture)</HelixRuntimeRid>
     <HelixRuntimeRid Condition="'$(TargetOSSpec)' == 'Browser'">browser-wasm</HelixRuntimeRid>
     <HelixRuntimeRid Condition="'$(TargetOSSpec)' == 'Android'">android-$(TargetArchitecture)</HelixRuntimeRid>
+    <HelixRuntimeRid Condition="'$(TargetOSSpec)' == 'iOSSimulator'">iossimulator-$(TargetArchitecture)</HelixRuntimeRid>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -107,7 +109,15 @@
     <DotNetCliRuntime Condition=" '$(TargetArchitecture)' == 'arm64' ">win-x64</DotNetCliRuntime>
   </PropertyGroup>
 
-  <PropertyGroup Condition="'$(TargetOS)' == 'Android'">
+  <PropertyGroup Condition="'$(TargetOS)' == 'iOSSimulator'">
+    <DotNetCliPackageType>sdk</DotNetCliPackageType>
+    <GlobalJsonContent>$([System.IO.File]::ReadAllText('$(RepoRoot)global.json'))</GlobalJsonContent>
+    <DotNetCliVersion>$([System.Text.RegularExpressions.Regex]::Match($(GlobalJsonContent), '(%3F&lt;="dotnet": ").*(%3F=")'))</DotNetCliVersion>
+    <!-- iOSSimulator needs to use the host OS DotnetCliRuntime -->
+    <DotNetCliRuntime>osx-x64</DotNetCliRuntime>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetOS)' == 'Android' or '$(TargetOS)' == 'iOS' or '$(TargetOS)' == 'iOSSimulator'">
     <IncludeXHarnessCli>true</IncludeXHarnessCli>
   </PropertyGroup>
 
@@ -156,6 +166,8 @@
       <!-- If there is a TestGrouping, then take only the files that belong to the TestGroup == $(_PayloadGroup). -->
       <_PayloadFiles Include="@(_TestGroupingRelevant->WithMetadataValue('TestGroup','$(_PayloadGroup)')->DistinctWithCase())" Condition="'$(_TestGroupingExists)' == 'true'" />
       <_PayloadFiles Include="$(_FileDirectory)*" Condition="'$(_TestGroupingExists)' == 'true'" />
+      <_PayloadFiles Include="$(_FileDirectory)/*.app" Condition="'$(_TestGroupingExists)' == 'true'" />
+      <_PayloadFiles Include="$(_FileDirectory)/*.app/**" Condition="'$(_TestGroupingExists)' == 'true'" />
 
       <_PayloadFiles Update="@(_PayloadFiles)">
         <!-- Never use [MSBuild]::MakeRelative here! We have some files containing Unicode characters in their %(FullPath) and
@@ -183,6 +195,15 @@
       <_XUnitConsoleRunnerFiles Include="$(NuGetPackageRoot)Microsoft.DotNet.XUnitConsoleRunner\$(MicrosoftDotNetXUnitConsoleRunnerVersion)\**\xunit.console.*" />
     </ItemGroup>
 
+    <!-- Helix has an old version of Node that we don't support. So we send a valid version (current LTS) in the correlation payload -->
+    <PropertyGroup Condition="'$(ForNode)' == 'true'">
+      <NodeFolder>$([MSBuild]::NormalizeDirectory('$(TestBinDir)', 'nodejs'))</NodeFolder>
+      <NodeDestinationFolder>$([MSBuild]::NormalizeDirectory('$(CoreRootDirectory)', 'nodejs'))</NodeDestinationFolder>
+    </PropertyGroup>
+    <DownloadFile Condition="'$(ForNode)' == 'true'" SourceUrl="https://nodejs.org/dist/latest-v14.x/node-v14.17.4-linux-x64.tar.xz" DestinationFolder="$(NodeFolder)"/>
+    <Exec Command="tar -xf node-v14.17.4-linux-x64.tar.xz" WorkingDirectory="$(NodeFolder)" IgnoreStandardErrorWarningFormat="true"  Condition="'$(ForNode)' == 'true'"/>
+    <Copy SourceFiles="$(NodeFolder)node-v14.17.4-linux-x64/bin/node" DestinationFolder="$(NodeDestinationFolder)" Condition="'$(ForNode)' == 'true'"/>
+
     <Copy SourceFiles="@(_XUnitConsoleRunnerFiles)" DestinationFolder="$(CoreRootDirectory)\xunit" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)scripts\runincontext.cmd" DestinationFolder="$(CoreRootDirectory)" Condition=" '$(TestWrapperTargetsWindows)' == 'true' and '$(_RunInUnloadableContext)' == 'true'" />
     <Copy SourceFiles="$(MSBuildThisFileDirectory)scripts/runincontext.sh" DestinationFolder="$(CoreRootDirectory)" Condition=" '$(TestWrapperTargetsWindows)' != 'true' and '$(_RunInUnloadableContext)' == 'true'" />
@@ -194,7 +215,7 @@
     <ItemGroup>
       <_PayloadGroups Include="$(PayloadGroups)" />
       <_ProjectsToBuild Include="testenvironment.proj">
-        <Properties>Scenario=$(Scenario);TestEnvFileName=$(PayloadsRootDirectory)%(_PayloadGroups.Identity)\$(TestEnvFileName);TargetsWindows=$(TestWrapperTargetsWindows);RuntimeVariant=$(_RuntimeVariant)</Properties>
+        <Properties>Scenario=$(Scenario);TestEnvFileName=$(PayloadsRootDirectory)%(_PayloadGroups.Identity)\$(TestEnvFileName);TargetsWindows=$(TestWrapperTargetsWindows);RuntimeVariant=$(_RuntimeVariant);ForNode=$(ForNode)</Properties>
       </_ProjectsToBuild>
     </ItemGroup>
 
@@ -215,7 +236,7 @@
     <ItemGroup>
       <_Scenario Include="$(_Scenarios.Split(','))" />
       <_ProjectsToBuild Include="$(MSBuildProjectFile)">
-        <AdditionalProperties>Scenario=%(_Scenario.Identity);PayloadGroups=$(_PayloadGroups)</AdditionalProperties>
+        <AdditionalProperties>Scenario=%(_Scenario.Identity);PayloadGroups=$(_PayloadGroups);ForNode=$(ForNode)</AdditionalProperties>
       </_ProjectsToBuild>
     </ItemGroup>
 
@@ -242,7 +263,7 @@
     <TimeoutPerTestInMilliseconds Condition=" '$(TimeoutPerTestInMinutes)' != '' ">$([System.TimeSpan]::FromMinutes($(TimeoutPerTestInMinutes)).TotalMilliseconds)</TimeoutPerTestInMilliseconds>
     <WaitForWorkItemCompletion>true</WaitForWorkItemCompletion>
     <_XUnitParallelMode>collections</_XUnitParallelMode>
-    <_XUnitParallelMode Condition=" '$(TargetOS)' == 'Android' ">none</_XUnitParallelMode>
+    <_XUnitParallelMode Condition=" '$(TargetOS)' == 'Android' or '$(TargetOS)' == 'iOSSimulator'">none</_XUnitParallelMode>
     <_XUnitParallelMode Condition=" '$(LongRunningGCTests)' == 'true' ">none</_XUnitParallelMode>
     <_XUnitParallelMode Condition=" '$(GcSimulatorTests)' == 'true' ">none</_XUnitParallelMode>
     <XUnitRunnerArgs>-parallel $(_XUnitParallelMode) -nocolor -noshadow -xml testResults.xml</XUnitRunnerArgs>
@@ -287,6 +308,10 @@
     <HelixPreCommand Include="export __CollectDumps=1" />
     <HelixPreCommand Include="export __CrashDumpFolder=$HELIX_DUMP_FOLDER" />
     <HelixPreCommand Include="cat $__TestEnv" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ForNode)' == 'true'">
+    <HelixPreCommand Include="export PATH=$HELIX_CORRELATION_PAYLOAD/nodejs:$PATH" />
   </ItemGroup>
 
   <PropertyGroup>

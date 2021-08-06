@@ -7,6 +7,11 @@
 const is_browser = typeof window != "undefined";
 const is_node = !is_browser && typeof process != 'undefined';
 
+// setup the globalThis pollyfill as it is not defined on older versions of node
+if (is_node && !global.globalThis) {
+	global.globalThis = global;
+}
+
 // if the engine doesn't provide a console
 if (typeof (console) === "undefined") {
 	console = {
@@ -16,15 +21,21 @@ if (typeof (console) === "undefined") {
 }
 function proxyMethod (prefix, func, asJson) {
 	return function() {
-		let args = [...arguments];
+		const args = [...arguments];
+		var payload= args[0];
+		if(payload === undefined) payload = 'undefined';
+		else if(payload === null) payload = 'null';
+		else if(typeof payload === 'function') payload = payload.toString();
+		else if(typeof payload !== 'string') payload = JSON.stringify(payload);
+
 		if (asJson) {
 			func (JSON.stringify({
 				method: prefix,
-				payload: args[0],
+				payload: payload,
 				arguments: args
 			}));
 		} else {
-			func([prefix + args[0], ...args.slice(1)]);
+			func([prefix + payload, ...args.slice(1)]);
 		}
 	};
 };
@@ -108,13 +119,13 @@ try {
 // abstract all IO into a compact universally available method so that it is consistent and reliable
 const IOHandler = {
 	/** Load js file into project and evaluate it
-	 * @type {(file: string) => Promise<void>} 
+	 * @type {(file: string) => Promise<void> | null}
 	 * @param {string} file path to the file to load
 	*/
 	load: null,
 	
 	/** Read and return the contents of a file as a string
-	 * @type {(file: string) => Promise<string>} 
+	 * @type {(file: string) => Promise<string> | null}
 	 * @param {string} file the path to the file to read
 	 * @return {string} the contents of the file
 	*/
@@ -140,8 +151,8 @@ const IOHandler = {
 						req = await req(Module); // pass Module so emsdk can use it
 					}
 
-					// add to the globalThis the file under the namespace of the upercase filename without js extension
-					globalThis[file.substring(2,file.length - 3).replace("-","_").toUpperCase()] = req;
+					// add to Module
+					Module = Object.assign(req, Module);
 				};
 			} else if (is_browser) { // vanila JS in browser
 				loadFunc = function (file) {
@@ -169,17 +180,6 @@ const IOHandler = {
 			}
 		}
 		IOHandler.read = async (file) => await readFunc(file);
-	},
-
-	/** Write the content to a file at a certain path
-	 * @type {(content: string, path: string) => void}
-	 * @param {string} content the contents to write to the file
-	 * @param {string} path the path to which to write the contents
-	*/
-	writeContentToFile: function(content, path) { // writes a string to a file
-		const stream = FS.open(path, 'w+');
-		FS.write(stream, content, 0, content.length, 0);
-		FS.close(stream);
 	},
 
 	/** Returns an async fetch request
@@ -234,10 +234,7 @@ function test_exit (exit_code) {
 		tests_done_elem.id = "tests_done";
 		tests_done_elem.innerHTML = exit_code.toString ();
 		document.body.appendChild (tests_done_elem);
-	} else if (is_node) {
-		Module.exit_code = exit_code;
-		console.log ("WASM EXIT " + exit_code);
-	} else {
+	} else { // shell or node
 		Module.wasm_exit (exit_code);
 	}
 }
@@ -315,6 +312,10 @@ var Module = {
 	 * @type {() => void}
 	 */
 	onRuntimeInitialized: function () {
+		if (!Module.config) {
+			console.error("Could not find ./mono-config.json. Cancelling run");
+			test_exit (1);
+		}
 		// Have to set env vars here to enable setting MONO_LOG_LEVEL etc.
 		for (let variable in setenv) {
 			Module.MONO.mono_wasm_setenv (variable, setenv [variable]);
@@ -335,14 +336,6 @@ var Module = {
 			App.init ();
 		};
 		Module.config.fetch_file_cb = function (asset) {
-			// console.log("fetch_file_cb('" + asset + "')");
-			// for testing purposes add BCL assets to VFS until we special case File.Open
-			// to identify when an assembly from the BCL is being open and resolve it correctly.
-			/*
-			var content = new Uint8Array (read (asset, 'binary'));
-			var path = asset.substr(Module.config.deploy_prefix.length);
-			IOHandler.writeContentToFile(content, path);
-			*/
 			return IOHandler.fetch (asset, { credentials: 'same-origin' });
 		};
 
@@ -355,7 +348,6 @@ var App = {
 	 * @type {() => void}
 	 */
 	init: function () {
-
 		const wasm_set_main_args = Module.cwrap ('mono_wasm_set_main_args', 'void', ['number', 'number']);
 		const wasm_strdup = Module.cwrap ('mono_wasm_strdup', 'number', ['string']);
 
@@ -438,7 +430,7 @@ var App = {
 	},
 
 	/** Runs a particular test
-	 * @type {(method_name: string, args: any[], signature: any?) => return number}
+	 * @type {(method_name: string, args: any[]=, signature: any=) => return number}
 	 */
 	call_test_method: function (method_name, args, signature) {
 		// note: arguments here is the array of arguments passsed to this function

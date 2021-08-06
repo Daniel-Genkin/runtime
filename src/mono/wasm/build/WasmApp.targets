@@ -82,8 +82,6 @@
     <!--<WasmStripAOTAssemblies Condition="'$(WasmStripAOTAssemblies)' == ''">$(RunAOTCompilation)</WasmStripAOTAssemblies>-->
     <WasmStripAOTAssemblies>false</WasmStripAOTAssemblies>
 
-    <!-- emcc, and mono-aot-cross don't like relative paths for output files -->
-    <_WasmIntermediateOutputPath>$([MSBuild]::NormalizeDirectory($(IntermediateOutputPath), 'wasm'))</_WasmIntermediateOutputPath>
     <_BeforeWasmBuildAppDependsOn />
   </PropertyGroup>
 
@@ -97,6 +95,7 @@
   <Target Name="_InitializeCommonProperties">
     <Error Condition="'$(MicrosoftNetCoreAppRuntimePackDir)' == '' and ('%(ResolvedRuntimePack.PackageDirectory)' == '' or !Exists(%(ResolvedRuntimePack.PackageDirectory)))"
            Text="Could not find %25(ResolvedRuntimePack.PackageDirectory)=%(ResolvedRuntimePack.PackageDirectory)" />
+    <Error Condition="'$(IntermediateOutputPath)' == ''" Text="%24(IntermediateOutputPath) property needs to be set" />
 
     <PropertyGroup>
       <MicrosoftNetCoreAppRuntimePackDir Condition="'$(MicrosoftNetCoreAppRuntimePackDir)' == ''">%(ResolvedRuntimePack.PackageDirectory)</MicrosoftNetCoreAppRuntimePackDir>
@@ -106,11 +105,14 @@
 
       <_WasmRuntimePackIncludeDir>$([MSBuild]::NormalizeDirectory($(MicrosoftNetCoreAppRuntimePackRidNativeDir), 'include'))</_WasmRuntimePackIncludeDir>
       <_WasmRuntimePackSrcDir>$([MSBuild]::NormalizeDirectory($(MicrosoftNetCoreAppRuntimePackRidNativeDir), 'src'))</_WasmRuntimePackSrcDir>
+
+      <_WasmIntermediateOutputPath>$([MSBuild]::NormalizeDirectory($(IntermediateOutputPath), 'wasm'))</_WasmIntermediateOutputPath>
     </PropertyGroup>
+
+    <MakeDir Directories="$(_WasmIntermediateOutputPath)" />
   </Target>
 
   <Target Name="_BeforeWasmBuildApp" DependsOnTargets="$(_BeforeWasmBuildAppDependsOn)">
-    <Error Condition="'$(IntermediateOutputPath)' == ''" Text="%24(IntermediateOutputPath) property needs to be set" />
     <Error Condition="!Exists('$(MicrosoftNetCoreAppRuntimePackRidDir)')" Text="MicrosoftNetCoreAppRuntimePackRidDir=$(MicrosoftNetCoreAppRuntimePackRidDir) doesn't exist" />
     <Error Condition="@(WasmAssembliesToBundle->Count()) == 0" Text="WasmAssembliesToBundle item is empty. No assemblies to process" />
 
@@ -122,7 +124,6 @@
       <WasmAppDir>$([MSBuild]::NormalizeDirectory($(WasmAppDir)))</WasmAppDir>
     </PropertyGroup>
 
-    <MakeDir Directories="$(_WasmIntermediateOutputPath)" />
     <ItemGroup>
       <_WasmAssembliesInternal Include="@(WasmAssembliesToBundle->Distinct())" />
 
@@ -258,27 +259,33 @@
         SkipUnchangedFiles="true" 
         Condition="Exists('package.json')"/>
 
-    <!-- Otherwise create a new file in the output directory with the defaults -->
-     <WriteLinesToFile
-      File="$(WasmAppDir)\package.json"
-      Lines='{
-  "name": "mono-wasm-test",
-  "version": "1.0.0",
-  "main": "runtime.js",
-  "author": "Microsoft",
-  "license": "MIT",
-  "dependencies": {
-    "perf_hooks": "0.0.1",
-    "ws": "^7.5.0"
-  }
-}'
-      Overwrite="true"
-      Condition="!Exists('package.json')">
-    </WriteLinesToFile>
+    <!-- Otherwise copy the default template into the output directory -->
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)\template-package.json"
+        DestinationFiles="$(WasmAppDir)\package.json"
+        SkipUnchangedFiles="true" 
+        Condition="!Exists('package.json')"/>
     
-    <!-- npm install -->
+    <!-- npm install via emsdk npm if not on CI -->
     <Exec Command="npm install"
+        EnvironmentVariables="@(EmscriptenEnvVars)"
         WorkingDirectory="$(WasmAppDir)"
-        IgnoreStandardErrorWarningFormat="true" />
+        IgnoreStandardErrorWarningFormat="true" 
+        Condition="'$(ContinuousIntegrationBuild)' != 'true'"/>
+
+    <!-- however, if we are on ci, then use npm ci to be more consistent. It needs a package-lock.json though, so we copy one over as well -->
+    <Copy SourceFiles="package-lock.json"
+        DestinationFolder="$(WasmAppDir)"
+        SkipUnchangedFiles="true" 
+        Condition="Exists('package-lock.json') and '$(ContinuousIntegrationBuild)' == 'true'"/>
+    <Copy SourceFiles="$(MSBuildThisFileDirectory)\template-package-lock.json"
+        DestinationFiles="$(WasmAppDir)\package-lock.json"
+        SkipUnchangedFiles="true" 
+        Condition="!Exists('package-lock.json') and '$(ContinuousIntegrationBuild)' == 'true'"/>
+    
+    <Exec Command="npm ci"
+        EnvironmentVariables="@(EmscriptenEnvVars)"
+        WorkingDirectory="$(WasmAppDir)"
+        IgnoreStandardErrorWarningFormat="true" 
+        Condition="'$(ContinuousIntegrationBuild)' == 'true'"/>
   </Target>
 </Project>

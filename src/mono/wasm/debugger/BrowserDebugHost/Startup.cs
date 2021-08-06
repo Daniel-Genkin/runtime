@@ -104,6 +104,7 @@ namespace Microsoft.WebAssembly.Diagnostics
                 router.MapGet("json/new", RewriteSingle);
                 router.MapGet("devtools/page/{pageId}", ConnectProxy);
                 router.MapGet("devtools/browser/{pageId}", ConnectProxy);
+                router.MapGet("devtools/node/{pageId}", ConnectNode);
 
                 string GetEndpoint(HttpContext context)
                 {
@@ -142,7 +143,21 @@ namespace Microsoft.WebAssembly.Diagnostics
                     await context.Response.WriteAsync(JsonSerializer.Serialize(alteredTabs));
                 }
 
+                async Task ConnectNode(HttpContext context)
+                {
+                    // monkey patch some values as Node starts on 9229 by default and the url cannot be made to include /devtools/node
+                    var devToolsHostForNode = new Uri("http://localhost:9229");
+                    context.Request.Path = $"/{context.Request.RouteValues["pageId"]}";
+                    await ConnectProxyInternal(context, devToolsHostForNode);
+                }
+
+
                 async Task ConnectProxy(HttpContext context)
+                {
+                    await ConnectProxyInternal(context, devToolsHost);
+                }
+
+                async Task ConnectProxyInternal(HttpContext context, Uri devToolsHostToConnect)
                 {
                     if (!context.WebSockets.IsWebSocketRequest)
                     {
@@ -150,7 +165,7 @@ namespace Microsoft.WebAssembly.Diagnostics
                         return;
                     }
 
-                    var endpoint = new Uri($"ws://{devToolsHost.Authority}{context.Request.Path}");
+                    var endpoint = new Uri($"ws://{devToolsHostToConnect.Authority}{context.Request.Path}");
                     try
                     {
                         using ILoggerFactory loggerFactory = LoggerFactory.Create(builder =>
